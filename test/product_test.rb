@@ -1,6 +1,3 @@
-require 'minitest/autorun'
-require './models/product'
-
 class ProductTest < Minitest::Test
   def setup
     @product = Product.new("CODE", "Product Name", 10)
