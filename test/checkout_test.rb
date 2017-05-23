@@ -72,13 +72,15 @@ class CheckoutTest < MiniTest::Test
   end
   
   def test_clear_scanned_adds_items_from_scanned_items_back_to_items_to_scan
+    expected = [@prod_1, @prod_2, @prod_3].map {|p| p.hashed }
+    
     @checkout.scan('all')
     @checkout.clear_scanned
-    assert_equal [@prod_1, @prod_2, @prod_3].map {|p| p.hashed }, @checkout.items_to_scan
+    assert_equal expected, @checkout.items_to_scan
     
     @checkout.scan(1)
     @checkout.clear_scanned
-    assert_equal [@prod_1, @prod_2, @prod_3].map {|q| q.hashed }, @checkout.items_to_scan
+    assert_equal expected, @checkout.items_to_scan
   end
   
   def test_clear_scanned_does_not_put_discount_items_back_into_items_to_scan
@@ -119,112 +121,87 @@ class CheckoutTest < MiniTest::Test
     @checkout.scan('all')
     assert_equal @basket.items.map {|i| i[:price] }.inject(:+), @checkout.total
   end
-
-  def test_apply_bogo_subtracts_as_expected_for_same_item
+  
+  def setup_discounts
     bskt = Basket.new
     3.times do
       bskt.add(@prod_1)
       bskt.add(@prod_2)
     end
     
-    co   = Checkout.new(bskt)
+    @co   = Checkout.new(bskt)
+    @ph_1 = @prod_1.hashed
+    @ph_2 = @prod_2.hashed
+    @bh_1 = @bogo_prod_1.hashed
+    @bh_2 = @bogo_prod_2.hashed
+  end
+  
+  def test_apply_bogo_subtracts_as_expected_for_same_item
+    setup_discounts
     
-    co.scan(0)
-    co.apply_bogo(@prod_1)
-    assert_equal [@prod_1.hashed], co.scanned_items
+    @co.scan(0)
+    @co.apply_bogo(@prod_1)
+    assert_equal [@ph_1], @co.scanned_items
     
-    co.scan(2)
-    co.apply_bogo(@prod_1)
-    assert_equal [@prod_1.hashed, @prod_2.hashed, @prod_1.hashed, @bogo_prod_1.hashed], co.scanned_items
+    @co.scan(2)
+    @co.apply_bogo(@prod_1)
+    assert_equal [@ph_1, @ph_2, @ph_1, @bh_1], @co.scanned_items
 
-    co.scan('all')
-    co.apply_bogo(@prod_1)
-    assert_equal [@prod_1.hashed,
-                  @prod_2.hashed,
-                  @prod_1.hashed,
-                  @bogo_prod_1.hashed,
-                  @prod_2.hashed,
-                  @prod_1.hashed,
-                  @prod_2.hashed], co.scanned_items
+    @co.scan('all')
+    @co.apply_bogo(@prod_1)
+    assert_equal [@ph_1, @ph_2, @ph_1, @bh_1, @ph_2, @ph_1, @ph_2], @co.scanned_items
   end
   
   def test_apply_bogo_subtracts_as_expected_for_different_item
-    bskt = Basket.new
-    3.times do
-      bskt.add(@prod_1)
-      bskt.add(@prod_2)
-    end
+    setup_discounts
     
-    co   = Checkout.new(bskt)
+    @co.scan(1)
+    @co.apply_bogo(@prod_1, @prod_2)
+    assert_equal [@ph_1, @ph_2, @bh_2], @co.scanned_items
     
-    co.scan(1)
-    co.apply_bogo(@prod_1, @prod_2)
-    assert_equal [@prod_1.hashed,
-                  @prod_2.hashed,
-                  @bogo_prod_2.hashed], co.scanned_items
-    
-    co.scan(3)
-    co.apply_bogo(@prod_1, @prod_2)
-    assert_equal [@prod_1.hashed,
-                  @prod_2.hashed,
-                  @bogo_prod_2.hashed,
-                  @prod_1.hashed,
-                  @prod_2.hashed,
-                  @bogo_prod_2.hashed], co.scanned_items
+    @co.scan(3)
+    @co.apply_bogo(@prod_1, @prod_2)
+    assert_equal [@ph_1, @ph_2, @bh_2, @ph_1, @ph_2, @bh_2], @co.scanned_items
 
-    co.scan('all')
-    co.apply_bogo(@prod_1, @prod_2)
-    assert_equal [@prod_1.hashed,
-                  @prod_2.hashed,
-                  @bogo_prod_2.hashed,
-                  @prod_1.hashed,
-                  @prod_2.hashed,
-                  @bogo_prod_2.hashed,
-                  @prod_1.hashed,
-                  @prod_2.hashed,
-                  @bogo_prod_2.hashed], co.scanned_items
+    @co.scan('all')
+    @co.apply_bogo(@prod_1, @prod_2)
+    assert_equal [@ph_1, @ph_2, @bh_2, @ph_1, @ph_2, @bh_2, @ph_1, @ph_2, @bh_2],
+                 @co.scanned_items
   end
   
   def test_apply_bogo_allows_for_a_limit_to_the_discount
     bskt = Basket.new
+    
     7.times do
       bskt.add(@prod_1)
     end
+    
+    ph_1 = @prod_1.hashed
+    bh_1 = @bogo_prod_1.hashed
     
     co   = Checkout.new(bskt)
     
     co.scan('all')
     co.apply_bogo(@prod_1, @prod_1, 2)
-    assert_equal [@prod_1.hashed,
-                  @prod_1.hashed,
-                  @bogo_prod_1.hashed,
-                  @prod_1.hashed,
-                  @prod_1.hashed,
-                  @bogo_prod_1.hashed,
-                  @prod_1.hashed,
-                  @prod_1.hashed,
-                  @prod_1.hashed], co.scanned_items
+    assert_equal [ph_1, ph_1, bh_1, ph_1, ph_1, bh_1, ph_1, ph_1, ph_1],
+                 co.scanned_items
   end
   
   def test_reduce_price_reduces_price_after_threshhold_reached
     bskt = Basket.new
+  
     5.times do
       bskt.add(@prod_1)
     end
     
+    ph_1 = @prod_1.hashed
+    rh_1 = @rduc_prod_1.hashed
     co   = Checkout.new(bskt)
     
     co.scan('all')
     co.reduce_price(@prod_1, 2.5, 3)
-    assert_equal [@prod_1.hashed,
-                  @rduc_prod_1.hashed,
-                  @prod_1.hashed,
-                  @rduc_prod_1.hashed,
-                  @prod_1.hashed,
-                  @rduc_prod_1.hashed,
-                  @prod_1.hashed,
-                  @rduc_prod_1.hashed,
-                  @prod_1.hashed,
-                  @rduc_prod_1.hashed], co.scanned_items
+    
+    assert_equal [ph_1, rh_1, ph_1, rh_1, ph_1, rh_1, ph_1, rh_1, ph_1, rh_1],
+                 co.scanned_items
   end
 end
