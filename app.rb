@@ -1,18 +1,13 @@
 Dir[File.dirname(__FILE__) + '/models/*.rb'].each {|file| require file }
- 
-(1..3).map do |item|
-	var_name 		= "@prod_#{item.to_s}"
-	item_code 	= "COD#{item.to_s}"
-	item_name 	= "Name of item ##{item.to_s}"
-	item_price 	= rand(0.01..1000.00)
-	item_object = Product.new(item_code, item_name, item_price)
-	
-	self.instance_variable_set(var_name, item_object)
-end
-	
-@basket 		= Basket.new(@prod_1, @prod_2, @prod_3)
+
+chai 	 = Product.new('CH1', 'Chai', 3.11)
+apples = Product.new('AP1', 'Apples', 6)
+coffee = Product.new('CF1', 'Coffee', 11.23)
+milk   = Product.new('MK1', 'Milk', 4.75)
+
+@basket 		= Basket.new(chai, apples, coffee, milk)
 @checkout   = Checkout.new(@basket)
 
-@checkout.scan('all')
+@checkout.scan(1)
 
 @checkout.print_receipt
