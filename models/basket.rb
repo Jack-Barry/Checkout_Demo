@@ -4,18 +4,13 @@ class Basket
   attr_accessor :items
   
   def initialize(*items)
-    @items = items.nil? || items.flatten.empty? ?
-             [self.empty_code] : []
+    @items = items.nil? || items.flatten.empty? ? [self.empty_code] : []
     
     items.flatten.each {|item| self.add(item) }
   end
   
   def empty_code
     { code: "EMPT", name: "Nothing in basket", price: 0 }
-  end
-  
-  def empty_product
-    Product.new(*empty_code.values)
   end
   
   def reject_code

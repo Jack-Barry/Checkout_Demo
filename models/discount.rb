@@ -1,4 +1,4 @@
-require_relative 'product'
+require './models/product'
 
 class Discount < Product
   def initialize(code, name, price)
